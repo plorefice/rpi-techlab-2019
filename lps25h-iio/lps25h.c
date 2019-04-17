@@ -26,8 +26,8 @@ static ssize_t lps25h_read_raw(struct iio_dev *indio_dev,
 {
 	struct lps25h *lps = iio_priv(indio_dev);
 	struct i2c_client *client = lps->client;
-	s16 temp;
-	s32 ret;
+	s32 temp, ret;
+	s16 raw;
 
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
@@ -37,18 +37,18 @@ static ssize_t lps25h_read_raw(struct iio_dev *indio_dev,
 			if (ret < 0) {
 				return ret;
 			}
-
-			temp = (s16)(ret & 0xff);
+			raw = (s16)(ret & 0xff);
 
 			ret = i2c_smbus_read_byte_data(client, LPS25H_TEMP_OUT_H_REG);
 			if (ret < 0) {
 				return ret;
 			}
+			raw |= (s16)((ret & 0xff) << 8);
 
-			temp |= (s16)((ret & 0xff) << 8);
+			temp = 42500 + (((s32)raw * 1000) / 480);
 
-			*val = 4250 + (((s32)temp * 100) / 480);
-			*val2 = 0;
+			*val = temp / 1000;
+			*val2 = (temp % 1000) * 1000;
 			return IIO_VAL_INT_PLUS_MICRO;
 		default:
 			return -EINVAL;
